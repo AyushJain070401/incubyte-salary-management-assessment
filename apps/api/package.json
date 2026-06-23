@@ -18,7 +18,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "create-hr-user": "tsx scripts/create-hr-user.ts"
   },
   "dependencies": {
     "@acme/shared": "workspace:*",
