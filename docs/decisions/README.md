@@ -20,3 +20,4 @@ Each ADR should be readable in under a minute. If it's longer, it's probably try
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions in ADRs | accepted |
 | [0002](0002-monorepo-with-pnpm-workspaces.md) | Monorepo with pnpm workspaces | accepted |
 | [0003](0003-split-frontend-and-backend.md) | Split frontend (Vite) and backend (Express), with a shared contracts package | accepted |
+| [0004](0004-backend-express-prisma-supabase.md) | Backend = Express + Prisma + Supabase (Postgres + Auth) | accepted |

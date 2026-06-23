@@ -1,3 +1,11 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# esbuild ships a small native binary that needs to run a post-install
+# script. We allow only esbuild explicitly; every other package's
+# install scripts stay sandboxed.
+allowBuilds:
+  esbuild: true
+onlyBuiltDependencies:
+  - esbuild
