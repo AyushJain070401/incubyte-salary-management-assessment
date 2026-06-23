@@ -5,6 +5,7 @@ import { RequireAuth } from './components/RequireAuth';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { EmployeesListPage } from './pages/EmployeesListPage';
+import { EmployeeDetailPage } from './pages/EmployeeDetailPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ImportPage } from './pages/ImportPage';
 
@@ -22,6 +23,7 @@ export function App() {
             }
           >
             <Route path="/employees" element={<EmployeesListPage />} />
+            <Route path="/employees/:id" element={<EmployeeDetailPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/import" element={<ImportPage />} />
           </Route>
