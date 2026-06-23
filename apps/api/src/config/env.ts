@@ -11,7 +11,11 @@ const EnvSchema = z.object({
     .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
   DATABASE_URL: z.string().url(),
   SUPABASE_URL: z.string().url(),
-  SUPABASE_JWT_SECRET: z.string().min(16, 'SUPABASE_JWT_SECRET must be at least 16 chars'),
+  // Optional. Newer Supabase projects use asymmetric signing (ES256 +
+  // JWKS), in which case the secret isn't used. Older projects sign
+  // with HS256, where this secret is required. The auth middleware
+  // picks the verification mode per-request based on the token's `alg`.
+  SUPABASE_JWT_SECRET: z.string().min(16).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
