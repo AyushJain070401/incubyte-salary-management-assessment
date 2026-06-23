@@ -13,6 +13,10 @@ export default defineConfig({
       // so env parsing doesn't reject during unit/route tests that mock
       // or never instantiate the prisma client.
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test_unused',
+      SUPABASE_URL: 'https://test.supabase.co',
+      // Same value the auth tests use when signing test JWTs; must be
+      // long enough to satisfy the env schema's min-length check.
+      SUPABASE_JWT_SECRET: 'test-jwt-secret-at-least-16-chars-long',
     },
     coverage: {
       provider: 'v8',
