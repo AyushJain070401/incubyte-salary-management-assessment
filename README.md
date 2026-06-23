@@ -46,27 +46,32 @@ docs/
 
 ## Local development
 
-Prerequisites: Node 22+, pnpm 11+, Docker (for local Postgres).
+Prerequisites: Node 22+, pnpm 11+, a [Supabase](https://supabase.com) project (free tier).
 
 ```bash
-# 1. install
+# 1. install deps
 pnpm install
 
-# 2. start Postgres
-docker compose up -d
-
-# 3. configure env for the api
+# 2. configure env for the api
 cp apps/api/.env.example apps/api/.env
+# fill in DATABASE_URL + SUPABASE_URL + SUPABASE_JWT_SECRET from your
+# Supabase project (Settings -> Database for DATABASE_URL, Settings -> API
+# for the other two)
 
-# 4. configure env for the web
+# 3. configure env for the web
 cp apps/web/.env.example apps/web/.env.local
+# fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY from Settings -> API
 
-# 5. apply database migrations
+# 4. apply database migrations to your Supabase project
 pnpm --filter @acme/api db:migrate
 
-# 6. start both apps (api on :4000, web on :5173)
+# 5. start both apps (api on :4000, web on :5173)
 pnpm dev
 ```
 
-Once the seed script lands (commit 7) the bootstrap is one extra command:
+Once the seed script lands (commit 7) the bootstrap adds:
 `pnpm --filter @acme/api db:reset` (which migrates + seeds in one step).
+
+The database is your Supabase Postgres — there's no local DB to install,
+start, or maintain. Dev and prod point at the same provider (typically
+different projects).

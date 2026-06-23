@@ -10,12 +10,11 @@ const EnvSchema = z.object({
     .default('http://localhost:5173')
     .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
   DATABASE_URL: z.string().url(),
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_JWT_SECRET: z.string().min(1).optional(),
 });
 
-// SUPABASE_URL and SUPABASE_JWT_SECRET stay optional until the auth
-// middleware lands (commit 8) and asserts on them at startup.
+// SUPABASE_URL and SUPABASE_JWT_SECRET will be added here when the auth
+// middleware lands in a later commit. The schema only declares vars that
+// are actually consumed by the running code.
 
 export type Env = z.infer<typeof EnvSchema>;
 

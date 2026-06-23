@@ -21,12 +21,12 @@ The split between `index.ts` (server) and `app.ts` (app factory) exists so tests
 ## Local dev
 
 ```bash
-# 1. start Postgres (docker-compose.yml at repo root)
-docker compose up -d
+# 1. create a free Supabase project at https://supabase.com (or reuse one)
+#    grab the database connection string + JWT secret from project settings
 
 # 2. configure env
 cp apps/api/.env.example apps/api/.env
-# defaults work against the docker-compose Postgres
+# fill in DATABASE_URL, SUPABASE_URL, SUPABASE_JWT_SECRET from Supabase dashboard
 
 # 3. run migrations + generate prisma client
 pnpm --filter @acme/api db:migrate
@@ -34,6 +34,12 @@ pnpm --filter @acme/api db:migrate
 # 4. start the api
 pnpm --filter @acme/api dev
 ```
+
+## Database
+
+Postgres lives in your Supabase project. There's no local DB to manage —
+`db:migrate` applies the migrations checked into `prisma/migrations/` to
+whatever `DATABASE_URL` points at.
 
 ## Database
 
