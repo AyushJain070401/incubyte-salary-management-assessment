@@ -12,7 +12,7 @@ export function ApiHealth() {
 
   if (isLoading) return <Pill tone="neutral">api: checking…</Pill>;
   if (isError || data?.status !== 'ok') return <Pill tone="bad">api: unreachable</Pill>;
-  return <Pill tone="good">api: ok ({Math.round(data.uptime)}s)</Pill>;
+  return <Pill tone="good">api: ok</Pill>;
 }
 
 function Pill({
