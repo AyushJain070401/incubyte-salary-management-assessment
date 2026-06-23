@@ -8,8 +8,8 @@ Web app that replaces ACME HR's spreadsheet-based salary management for ~10,000 
 
 - [Requirements (one page)](docs/REQUIREMENTS.md)
 - [Architecture decisions (ADRs)](docs/decisions/)
-- [Architecture overview](docs/ARCHITECTURE.md) — _coming in commit 3_
-- [Trade-offs](docs/TRADE-OFFS.md) — _coming in commit 3_
+- [Architecture overview](docs/ARCHITECTURE.md)
+- [Trade-offs](docs/TRADE-OFFS.md)
 - [AI usage notes](docs/AI-USAGE.md) — _coming in final commit_
 - [Demo script](docs/DEMO.md) — _coming in final commit_
 
