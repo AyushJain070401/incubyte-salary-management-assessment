@@ -241,9 +241,12 @@ async function main() {
     );
     const lastName = faker.person.lastName();
     const fullName = `${firstName} ${lastName}`;
-    const email = faker.internet
-      .email({ firstName, lastName, provider: 'acme.test' })
-      .toLowerCase();
+    // Suffix with the employee_code (already unique) so 10k emails are
+    // guaranteed unique even when faker repeats a (first, last) pair.
+    const emailLocal = `${firstName}.${lastName}.${employeeCode}`
+      .toLowerCase()
+      .replace(/[^a-z0-9.\-]/g, '');
+    const email = `${emailLocal}@acme.test`;
 
     const yearsBack = faker.number.float({ min: 0.25, max: 8 });
     const hireDate = isoDate(faker.date.past({ years: yearsBack }));
