@@ -1,30 +1,33 @@
-import { ApiHealth } from './components/ApiHealth';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+import { AuthProvider } from './lib/auth';
+import { RequireAuth } from './components/RequireAuth';
+import { AppLayout } from './components/AppLayout';
+import { LoginPage } from './pages/LoginPage';
+import { EmployeesListPage } from './pages/EmployeesListPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { ImportPage } from './pages/ImportPage';
 
 export function App() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <header className="mb-12 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">ACME Salary Management</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Scaffold — features land in the next commits.
-          </p>
-        </div>
-        <ApiHealth />
-      </header>
-
-      <section className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500">
-          Roadmap
-        </h2>
-        <ul className="mt-3 space-y-1.5 text-sm text-neutral-700">
-          <li>Employees: list, search, filter, sort, detail, salary history</li>
-          <li>Give raise (transactional, audited)</li>
-          <li>CSV bulk import with dry-run preview</li>
-          <li>Analytics dashboard (headcount, distributions, top earners, pay bands)</li>
-          <li>Multi-currency display via snapshot FX</li>
-        </ul>
-      </section>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            element={
+              <RequireAuth>
+                <AppLayout />
+              </RequireAuth>
+            }
+          >
+            <Route path="/employees" element={<EmployeesListPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/import" element={<ImportPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/employees" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
