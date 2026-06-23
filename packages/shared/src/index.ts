@@ -8,3 +8,4 @@ export * from './pagination.js';
 export * from './filters.js';
 export * from './error.js';
 export * from './import.js';
+export * from './analytics.js';
