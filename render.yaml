@@ -1,0 +1,43 @@
+# Render blueprint for the api. Connect this repo to a new Render
+# project; Render will pick up this file and provision the service.
+#
+# Env vars to set in the Render dashboard before first deploy:
+#   DATABASE_URL          (Supabase direct connection string)
+#   SUPABASE_URL          (https://YOUR-PROJECT-REF.supabase.co)
+#   SUPABASE_JWT_SECRET   (Supabase Settings -> API)
+#   CORS_ORIGINS          (e.g. https://your-app.vercel.app)
+#
+# PORT, NODE_ENV are set automatically by Render.
+
+services:
+  - type: web
+    name: acme-salary-api
+    runtime: node
+    rootDir: .
+    buildCommand: |
+      corepack enable
+      pnpm install --frozen-lockfile
+      pnpm --filter @acme/api db:generate
+      pnpm --filter @acme/api build
+    startCommand: pnpm --filter @acme/api start
+    plan: free
+    region: oregon
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: PNPM_VERSION
+        value: '11'
+      # The values below must be set in the Render dashboard, not here.
+      # Listed so Render's UI shows them as expected env vars.
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
