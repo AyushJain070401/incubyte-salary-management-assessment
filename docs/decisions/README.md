@@ -22,3 +22,4 @@ Each ADR should be readable in under a minute. If it's longer, it's probably try
 | [0003](0003-split-frontend-and-backend.md) | Split frontend (Vite) and backend (Express), with a shared contracts package | accepted |
 | [0004](0004-backend-express-prisma-supabase.md) | Backend = Express + Prisma + Supabase (Postgres + Auth) | accepted |
 | [0005](0005-frontend-vite-react-tailwind-tanstack.md) | Frontend = Vite + React + Tailwind v4 + TanStack Query + shadcn/ui | accepted |
+| [0006](0006-append-only-salary-history.md) | Append-only salary history with a partial unique constraint | accepted |

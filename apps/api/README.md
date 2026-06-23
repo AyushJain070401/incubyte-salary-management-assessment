@@ -21,10 +21,36 @@ The split between `index.ts` (server) and `app.ts` (app factory) exists so tests
 ## Local dev
 
 ```bash
+# 1. start Postgres (docker-compose.yml at repo root)
+docker compose up -d
+
+# 2. configure env
 cp apps/api/.env.example apps/api/.env
-# edit DATABASE_URL, SUPABASE_URL, SUPABASE_JWT_SECRET when those features land
+# defaults work against the docker-compose Postgres
+
+# 3. run migrations + generate prisma client
+pnpm --filter @acme/api db:migrate
+
+# 4. start the api
 pnpm --filter @acme/api dev
 ```
+
+## Database
+
+Prisma schema lives in `prisma/schema.prisma`; migrations live in
+`prisma/migrations/`. The migration history is committed to the repo —
+production deploys run `prisma migrate deploy` (no schema diffing) to
+apply only what's checked in.
+
+Local commands:
+
+| Command | Use |
+|---|---|
+| `pnpm db:migrate` | Apply outstanding migrations, generate client |
+| `pnpm db:deploy` | Apply migrations only (used in CI / prod) |
+| `pnpm db:reset` | Drop the database, re-run all migrations, re-seed |
+| `pnpm db:studio` | Open Prisma Studio to inspect data |
+| `pnpm db:generate` | Regenerate the Prisma client after schema edits |
 
 ## Tests
 

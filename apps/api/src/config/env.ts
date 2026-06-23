@@ -9,14 +9,13 @@ const EnvSchema = z.object({
     .string()
     .default('http://localhost:5173')
     .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
-  DATABASE_URL: z.string().url().optional(),
+  DATABASE_URL: z.string().url(),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_JWT_SECRET: z.string().min(1).optional(),
 });
 
-// DATABASE_URL, SUPABASE_URL, SUPABASE_JWT_SECRET are optional in the scaffold
-// commit and become required as the features that need them land. Each route
-// or middleware that consumes them asserts at startup.
+// SUPABASE_URL and SUPABASE_JWT_SECRET stay optional until the auth
+// middleware lands (commit 8) and asserts on them at startup.
 
 export type Env = z.infer<typeof EnvSchema>;
 

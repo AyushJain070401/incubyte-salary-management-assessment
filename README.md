@@ -46,11 +46,27 @@ docs/
 
 ## Local development
 
-> Full setup instructions land alongside the scaffolding commits. This section will be filled in as the apps come online.
-
-Prerequisites: Node 22+, pnpm 9+, a Supabase project (free tier).
+Prerequisites: Node 22+, pnpm 11+, Docker (for local Postgres).
 
 ```bash
+# 1. install
 pnpm install
-# ... env setup, db reset, seed, dev — to be documented
+
+# 2. start Postgres
+docker compose up -d
+
+# 3. configure env for the api
+cp apps/api/.env.example apps/api/.env
+
+# 4. configure env for the web
+cp apps/web/.env.example apps/web/.env.local
+
+# 5. apply database migrations
+pnpm --filter @acme/api db:migrate
+
+# 6. start both apps (api on :4000, web on :5173)
+pnpm dev
 ```
+
+Once the seed script lands (commit 7) the bootstrap is one extra command:
+`pnpm --filter @acme/api db:reset` (which migrates + seeds in one step).

@@ -1,0 +1,3 @@
+# Prisma uses this to detect when the database provider has changed.
+# Do not edit by hand.
+provider = "postgresql"

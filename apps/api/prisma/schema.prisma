@@ -1,0 +1,88 @@
+// Prisma schema for ACME Salary Management.
+//
+// Conventions:
+// - Application names are camelCase; DB names are snake_case (via @map).
+// - All ids are UUIDs (random, not auto-incrementing) so they're safe to
+//   surface in URLs without leaking enumeration.
+// - Money is stored as BigInt minor units + an ISO-4217 currency code;
+//   conversion happens at the read layer (see docs/TRADE-OFFS.md).
+// - Timestamps are timestamptz; dates are date.
+//
+// Indexes are documented inline with their query patterns.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// One row per employee. Mutable fields (name, country, role, etc.) update in
+// place; salary changes do NOT update this table — they go to `salaries`.
+model Employee {
+  id           String   @id @default(uuid()) @db.Uuid
+  employeeCode String   @unique @map("employee_code") @db.VarChar(32)
+  fullName     String   @map("full_name") @db.VarChar(120)
+  email        String   @unique @db.VarChar(254)
+  country      String   @db.Char(2) // ISO-3166-1 alpha-2
+  department   String   @db.VarChar(120)
+  role         String   @db.VarChar(120)
+  level        String   @db.VarChar(120)
+  hireDate     DateTime @map("hire_date") @db.Date
+  status       String   @default("active") @db.VarChar(20) // 'active' | 'terminated'
+  gender       String?  @db.VarChar(20) // nullable, opt-in
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  salaries Salary[]
+
+  // Query pattern: GET /employees with country/department/status filters.
+  @@index([country], map: "employees_country_idx")
+  @@index([department], map: "employees_department_idx")
+  @@index([status], map: "employees_status_idx")
+  @@map("employees")
+}
+
+// Append-only salary history. A raise inserts a new row and sets the
+// previous row's `effectiveTo` in a single transaction. The "current"
+// salary for an employee is the row where effectiveTo IS NULL.
+//
+// Audit columns (`reason`, `changedBy`, `changedAt`) live on the row so a
+// single SELECT returns the full who/when/why for each salary entry.
+model Salary {
+  id            String    @id @default(uuid()) @db.Uuid
+  employeeId    String    @map("employee_id") @db.Uuid
+  amountMinor   BigInt    @map("amount_minor")
+  currency      String    @db.Char(3) // ISO-4217
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  reason        String?   @db.VarChar(500)
+  changedBy     String?   @map("changed_by") @db.Uuid // Supabase user id
+  changedAt     DateTime  @default(now()) @map("changed_at") @db.Timestamptz(6)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Query pattern: salary history for an employee, newest first.
+  @@index([employeeId, effectiveFrom(sort: Desc)], map: "salaries_employee_history_idx")
+  // The partial unique index "at most one current row per employee"
+  // is added in the migration SQL — Prisma doesn't model partial uniques.
+  @@map("salaries")
+}
+
+// Snapshot FX rates. (base, quote, as_of) -> rate.
+// The application picks the most recent `as_of` row for each currency pair
+// when converting at read time. Live rates are out of scope for v1;
+// see docs/TRADE-OFFS.md ("Currency conversion").
+model FxRate {
+  baseCurrency  String   @map("base_currency") @db.Char(3)
+  quoteCurrency String   @map("quote_currency") @db.Char(3)
+  rate          Decimal  @db.Decimal(20, 10)
+  asOf          DateTime @map("as_of") @db.Date
+
+  @@id([baseCurrency, quoteCurrency, asOf])
+  @@index([baseCurrency, quoteCurrency, asOf(sort: Desc)], map: "fx_rates_latest_idx")
+  @@map("fx_rates")
+}

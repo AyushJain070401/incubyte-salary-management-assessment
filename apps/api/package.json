@@ -12,10 +12,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:reset": "prisma migrate reset --force",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@acme/shared": "workspace:*",
+    "@prisma/client": "^5.20.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
@@ -31,6 +37,7 @@
     "@types/supertest": "^6.0.2",
     "eslint": "^9.13.0",
     "pino-pretty": "^11.3.0",
+    "prisma": "^5.20.0",
     "supertest": "^7.0.0",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3",
