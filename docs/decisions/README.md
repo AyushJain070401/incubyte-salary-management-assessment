@@ -23,3 +23,4 @@ Each ADR should be readable in under a minute. If it's longer, it's probably try
 | [0004](0004-backend-express-prisma-supabase.md) | Backend = Express + Prisma + Supabase (Postgres + Auth) | accepted |
 | [0005](0005-frontend-vite-react-tailwind-tanstack.md) | Frontend = Vite + React + Tailwind v4 + TanStack Query + shadcn/ui | accepted |
 | [0006](0006-append-only-salary-history.md) | Append-only salary history with a partial unique constraint | accepted |
+| [0007](0007-money-and-fx-domain.md) | Money as BigInt minor units + snapshot FX with direct currency pairs | accepted |
