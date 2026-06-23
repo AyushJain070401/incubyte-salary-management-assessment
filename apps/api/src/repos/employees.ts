@@ -3,6 +3,39 @@ import type { EmployeeListQuery } from '@acme/shared';
 
 import { prisma } from '../db/client.js';
 
+// Shape returned by getEmployeeById. Same columns as the list row but
+// without the FX-conversion fields — the detail endpoint doesn't need
+// them (it shows native currency).
+export type EmployeeDetailRow = {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  country: string;
+  department: string;
+  role: string;
+  level: string;
+  hireDate: Date;
+  status: string;
+  gender: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  currentAmountMinor: bigint | null;
+  currentCurrency: string | null;
+};
+
+export type SalaryHistoryRow = {
+  id: string;
+  employeeId: string;
+  amountMinor: bigint;
+  currency: string;
+  effectiveFrom: Date;
+  effectiveTo: Date | null;
+  reason: string | null;
+  changedBy: string | null;
+  changedAt: Date;
+};
+
 // Row returned by listEmployees. Mirrors the shape the controller needs
 // to assemble an EmployeeRead — repo returns raw, domain-typed values.
 export type EmployeeListRow = {
@@ -199,4 +232,152 @@ export async function listEmployees(q: EmployeeListQuery): Promise<ListEmployees
     })),
     total,
   };
+}
+
+// Single-employee read with current salary attached. Returns null if no
+// row matches (controller maps to 404).
+export async function getEmployeeById(id: string): Promise<EmployeeDetailRow | null> {
+  const row = await prisma.employee.findUnique({
+    where: { id },
+    include: {
+      salaries: {
+        where: { effectiveTo: null },
+        take: 1,
+      },
+    },
+  });
+
+  if (!row) return null;
+
+  const current = row.salaries[0];
+
+  return {
+    id: row.id,
+    employeeCode: row.employeeCode,
+    fullName: row.fullName,
+    email: row.email,
+    country: row.country.trim(),
+    department: row.department,
+    role: row.role,
+    level: row.level,
+    hireDate: row.hireDate,
+    status: row.status.trim(),
+    gender: row.gender,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    currentAmountMinor: current?.amountMinor ?? null,
+    currentCurrency: current?.currency.trim() ?? null,
+  };
+}
+
+// Newest-first salary history for an employee. Includes all rows
+// (current + historical).
+export async function listSalariesByEmployee(
+  employeeId: string,
+): Promise<SalaryHistoryRow[]> {
+  const rows = await prisma.salary.findMany({
+    where: { employeeId },
+    orderBy: { effectiveFrom: 'desc' },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    employeeId: r.employeeId,
+    amountMinor: r.amountMinor,
+    currency: r.currency.trim(),
+    effectiveFrom: r.effectiveFrom,
+    effectiveTo: r.effectiveTo,
+    reason: r.reason,
+    changedBy: r.changedBy,
+    changedAt: r.changedAt,
+  }));
+}
+
+// Transactional give-raise: close the current row and insert a new one.
+// Returns the new row.
+//
+// Validation that runs inside the transaction:
+//   - the employee exists (else throws Prisma P2025-style)
+//   - the new effectiveFrom is strictly later than the current
+//     row's effectiveFrom (else throws — controller maps to 422)
+//
+// The partial unique index `salaries_current_uniq` enforces "one
+// current salary per employee" at the database level — if two raises
+// race, the second INSERT fails with a 23505 unique-violation and the
+// whole transaction rolls back. Controller maps to 409 conflict.
+export type GiveRaiseInput = {
+  employeeId: string;
+  amountMinor: bigint;
+  currency: string;
+  effectiveFrom: Date;
+  reason: string | null;
+  changedBy: string;
+};
+
+export async function giveRaise(input: GiveRaiseInput): Promise<SalaryHistoryRow> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.salary.findFirst({
+      where: { employeeId: input.employeeId, effectiveTo: null },
+    });
+
+    if (current) {
+      if (input.effectiveFrom <= current.effectiveFrom) {
+        // Hoist out as a typed signal — controller catches and maps.
+        throw new RaiseValidationError(
+          `effectiveFrom (${input.effectiveFrom.toISOString().slice(0, 10)}) must be after the current salary's effective_from (${current.effectiveFrom.toISOString().slice(0, 10)})`,
+        );
+      }
+
+      // Close the current row: effective_to = effective_from - 1 day.
+      const closingDate = new Date(input.effectiveFrom);
+      closingDate.setUTCDate(closingDate.getUTCDate() - 1);
+
+      await tx.salary.update({
+        where: { id: current.id },
+        data: { effectiveTo: closingDate },
+      });
+    } else {
+      // No current row — either a new hire whose initial salary is
+      // being set, or the data is missing. Either way, just insert.
+      // The employee must still exist; verify before insert so we can
+      // distinguish "missing employee" from a unique-violation race.
+      const exists = await tx.employee.findUnique({
+        where: { id: input.employeeId },
+        select: { id: true },
+      });
+      if (!exists) throw new RaiseValidationError('employee not found');
+    }
+
+    const inserted = await tx.salary.create({
+      data: {
+        employeeId: input.employeeId,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+        effectiveFrom: input.effectiveFrom,
+        effectiveTo: null,
+        reason: input.reason,
+        changedBy: input.changedBy,
+      },
+    });
+
+    return {
+      id: inserted.id,
+      employeeId: inserted.employeeId,
+      amountMinor: inserted.amountMinor,
+      currency: inserted.currency.trim(),
+      effectiveFrom: inserted.effectiveFrom,
+      effectiveTo: inserted.effectiveTo,
+      reason: inserted.reason,
+      changedBy: inserted.changedBy,
+      changedAt: inserted.changedAt,
+    };
+  });
+}
+
+// Lightweight error used to signal validation problems caught inside
+// the transaction. The service layer translates these to ApiError.
+export class RaiseValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RaiseValidationError';
+  }
 }

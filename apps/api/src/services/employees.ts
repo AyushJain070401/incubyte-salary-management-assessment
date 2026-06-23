@@ -4,11 +4,25 @@ import type {
   Paginated,
   Gender,
   EmployeeStatus,
+  SalaryRead,
+  RaiseInput,
 } from '@acme/shared';
+import { Prisma } from '@prisma/client';
 
-import { listEmployees as listEmployeesRepo } from '../repos/employees.js';
-import { toWire } from '../domain/money.js';
-import type { EmployeeListRow } from '../repos/employees.js';
+import {
+  listEmployees as listEmployeesRepo,
+  getEmployeeById,
+  listSalariesByEmployee,
+  giveRaise,
+  RaiseValidationError,
+} from '../repos/employees.js';
+import { toWire, fromWire } from '../domain/money.js';
+import { ApiError } from '../middleware/errors.js';
+import type {
+  EmployeeListRow,
+  EmployeeDetailRow,
+  SalaryHistoryRow,
+} from '../repos/employees.js';
 
 // Convert a Date to the YYYY-MM-DD ISO date string the schema requires.
 function toIsoDate(d: Date): string {
@@ -65,4 +79,97 @@ export async function listEmployeesService(
     total,
     totalPages: Math.max(1, Math.ceil(total / q.perPage)),
   };
+}
+
+// Convert a detail row to EmployeeRead. No displaySalary — detail
+// endpoint shows native currency only.
+function detailRowToRead(row: EmployeeDetailRow): EmployeeRead {
+  const out: EmployeeRead = {
+    id: row.id,
+    employeeCode: row.employeeCode,
+    fullName: row.fullName,
+    email: row.email,
+    country: row.country,
+    department: row.department,
+    role: row.role,
+    level: row.level,
+    hireDate: row.hireDate.toISOString().slice(0, 10),
+    status: row.status as EmployeeStatus,
+    gender: row.gender as Gender,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+  if (row.currentAmountMinor !== null && row.currentCurrency) {
+    out.currentSalary = {
+      amountMinor: toWire(row.currentAmountMinor),
+      currency: row.currentCurrency,
+    };
+  }
+  return out;
+}
+
+// One employee with current salary. 404 if not found.
+export async function getEmployeeService(id: string): Promise<EmployeeRead> {
+  const row = await getEmployeeById(id);
+  if (!row) throw ApiError.notFound(`employee ${id} not found`);
+  return detailRowToRead(row);
+}
+
+// Convert a salary repo row to SalaryRead wire shape.
+function salaryRowToRead(row: SalaryHistoryRow): SalaryRead {
+  return {
+    id: row.id,
+    employeeId: row.employeeId,
+    amountMinor: toWire(row.amountMinor),
+    currency: row.currency,
+    effectiveFrom: row.effectiveFrom.toISOString().slice(0, 10),
+    effectiveTo: row.effectiveTo ? row.effectiveTo.toISOString().slice(0, 10) : null,
+    reason: row.reason,
+    changedBy: row.changedBy,
+    changedAt: row.changedAt.toISOString(),
+  };
+}
+
+// Salary history for an employee, newest first.
+// 404 if the employee doesn't exist.
+export async function listSalariesService(employeeId: string): Promise<SalaryRead[]> {
+  const exists = await getEmployeeById(employeeId);
+  if (!exists) throw ApiError.notFound(`employee ${employeeId} not found`);
+  const rows = await listSalariesByEmployee(employeeId);
+  return rows.map(salaryRowToRead);
+}
+
+// Give-raise orchestration:
+//   - converts the wire RaiseInput to the repo input shape
+//   - invokes the transactional repo call
+//   - maps RaiseValidationError -> 422 and Prisma unique-violation -> 409
+export async function giveRaiseService(
+  employeeId: string,
+  input: RaiseInput,
+  changedBy: string,
+): Promise<SalaryRead> {
+  try {
+    const row = await giveRaise({
+      employeeId,
+      amountMinor: fromWire(input.amountMinor),
+      currency: input.currency,
+      effectiveFrom: new Date(`${input.effectiveFrom}T00:00:00.000Z`),
+      reason: input.reason ?? null,
+      changedBy,
+    });
+    return salaryRowToRead(row);
+  } catch (err) {
+    if (err instanceof RaiseValidationError) {
+      throw ApiError.unprocessable(err.message);
+    }
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === 'P2002'
+    ) {
+      throw ApiError.conflict(
+        'a concurrent raise already created a current salary row; retry',
+      );
+    }
+    throw err;
+  }
 }
