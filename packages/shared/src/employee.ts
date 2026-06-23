@@ -34,6 +34,9 @@ const IsoDate = z
 // Returned by GET /employees and GET /employees/:id.
 // `currentSalary` is the row from the salaries table with effective_to = null,
 // or absent if the employee has no salary on file yet.
+// `displaySalary`, when present, is `currentSalary` converted to the
+// `displayCurrency` query parameter — useful for "show me everyone's pay in
+// USD" without forcing the client to do FX itself.
 export const EmployeeReadSchema = z.object({
   id: z.string().uuid(),
   employeeCode: EmployeeCode,
@@ -47,6 +50,7 @@ export const EmployeeReadSchema = z.object({
   status: EmployeeStatusSchema,
   gender: GenderSchema,
   currentSalary: MoneySchema.optional(),
+  displaySalary: MoneySchema.optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

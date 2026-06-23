@@ -25,3 +25,4 @@ Each ADR should be readable in under a minute. If it's longer, it's probably try
 | [0006](0006-append-only-salary-history.md) | Append-only salary history with a partial unique constraint | accepted |
 | [0007](0007-money-and-fx-domain.md) | Money as BigInt minor units + snapshot FX with direct currency pairs | accepted |
 | [0008](0008-jwt-auth-with-typed-error-envelope.md) | JWT verification middleware + typed error envelope | accepted |
+| [0009](0009-backend-layering.md) | Backend layering — routes / controllers / services / repos / domain | accepted |

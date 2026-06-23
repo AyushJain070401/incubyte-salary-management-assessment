@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { CountryCodeSchema, EmployeeStatusSchema } from './employee.js';
 import { CurrencySchema } from './money.js';
+import { PaginationQuerySchema } from './pagination.js';
 
 // Shared filter surface for the employees list and the analytics endpoints.
 // Each filter is optional; the absence of a filter means "all values".
@@ -37,6 +38,6 @@ export const EmployeeListQuerySchema = EmployeeFiltersSchema.extend({
   sortBy: EmployeeSortFieldSchema.default('fullName'),
   sortDir: SortDirSchema.default('asc'),
   displayCurrency: CurrencySchema.default('USD'),
-});
+}).merge(PaginationQuerySchema);
 
 export type EmployeeListQuery = z.infer<typeof EmployeeListQuerySchema>;

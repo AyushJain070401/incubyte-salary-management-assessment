@@ -8,7 +8,7 @@ export class ApiError extends Error {
     readonly code: ApiErrorCode,
     readonly status: number,
     message: string,
-    readonly cause?: unknown,
+    override readonly cause?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
