@@ -18,7 +18,6 @@ services:
       corepack enable
       pnpm install --frozen-lockfile
       pnpm --filter @acme/api db:generate
-      pnpm --filter @acme/api build
     startCommand: pnpm --filter @acme/api start
     plan: free
     region: oregon

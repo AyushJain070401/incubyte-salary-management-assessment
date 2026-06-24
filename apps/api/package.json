@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src test",
@@ -33,6 +33,7 @@
     "papaparse": "^5.4.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
+    "tsx": "^4.19.1",
     "zod": "^3.23.8"
   },
   "prisma": {
@@ -49,7 +50,6 @@
     "pino-pretty": "^11.3.0",
     "prisma": "^5.20.0",
     "supertest": "^7.0.0",
-    "tsx": "^4.19.1",
     "typescript": "^5.6.3",
     "vitest": "^2.1.3"
   }
