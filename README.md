@@ -4,8 +4,11 @@ End-to-end web app that replaces ACME HR's spreadsheet-based salary management f
 
 ## Links
 
-- 🌐 **Live demo**: _(deployment URL — fill in after step 7 of [docs/DEPLOY.md](docs/DEPLOY.md))_
-- 🎬 **Demo video**: _(screen-recording link — record using the script in [docs/DEMO.md](docs/DEMO.md))_
+- 🌐 **Live demo**: <https://incubyte-salary-management-assessme.vercel.app>
+- 🎬 **Demo video**: [`acme-salary-demo.mp4`](./acme-salary-demo.mp4) — ~90-second end-to-end walkthrough (silent screen-capture, scripted in [docs/DEMO.md](docs/DEMO.md))
+- 🔑 **HR Manager credentials** (for the live demo):
+  - email: `hr@acme.test`
+  - password: `AcmeHR-2026!`
 
 ## Docs
 
