@@ -381,3 +381,170 @@ export class RaiseValidationError extends Error {
     this.name = 'RaiseValidationError';
   }
 }
+
+export type EmployeeChangeRow = {
+  id: string;
+  employeeId: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string | null;
+  changedAt: Date;
+  reason: string | null;
+};
+
+export type UpdateEmployeeInput = {
+  employeeId: string;
+  patch: {
+    fullName?: string | undefined;
+    email?: string | undefined;
+    country?: string | undefined;
+    department?: string | undefined;
+    role?: string | undefined;
+    level?: string | undefined;
+    status?: string | undefined;
+    gender?: string | null | undefined;
+  };
+  changedBy: string | null;
+  reason: string | null;
+};
+
+// Patchable field names (camelCase) and their DB column keys on the Employee model.
+const PATCHABLE_FIELDS = [
+  'fullName',
+  'email',
+  'country',
+  'department',
+  'role',
+  'level',
+  'status',
+  'gender',
+] as const;
+
+type PatchableField = (typeof PATCHABLE_FIELDS)[number];
+
+// Update mutable employee fields and record a change row per diffed field,
+// all in a single transaction. Returns the updated employee detail row.
+// Throws if the employee doesn't exist.
+export async function updateEmployee(
+  input: UpdateEmployeeInput,
+): Promise<EmployeeDetailRow> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.employee.findUnique({
+      where: { id: input.employeeId },
+      include: { salaries: { where: { effectiveTo: null }, take: 1 } },
+    });
+
+    if (!current) throw new EmployeeNotFoundError(input.employeeId);
+
+    // Diff: collect only fields that actually changed.
+    const changeRows: {
+      employeeId: string;
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+      changedBy: string | null;
+      reason: string | null;
+    }[] = [];
+
+    const updateData: Record<string, unknown> = {};
+
+    for (const field of PATCHABLE_FIELDS) {
+      if (!(field in input.patch)) continue;
+      const newVal = (input.patch as Record<PatchableField, unknown>)[field];
+      const oldVal = current[field as keyof typeof current] as string | null;
+
+      // Normalise for comparison (CHAR(2) from postgres has trailing spaces).
+      const oldNorm = typeof oldVal === 'string' ? oldVal.trim() : oldVal;
+      const newNorm = newVal === undefined ? undefined : (newVal as string | null);
+
+      if (oldNorm === newNorm) continue; // no-op
+
+      updateData[field] = newVal;
+      changeRows.push({
+        employeeId: input.employeeId,
+        field,
+        oldValue: oldNorm ?? null,
+        newValue: newNorm !== null && newNorm !== undefined ? String(newNorm) : null,
+        changedBy: input.changedBy,
+        reason: input.reason,
+      });
+    }
+
+    if (changeRows.length === 0) {
+      // Nothing changed — return current state without a DB write.
+      const sal = current.salaries[0];
+      return {
+        id: current.id,
+        employeeCode: current.employeeCode,
+        fullName: current.fullName,
+        email: current.email,
+        country: current.country.trim(),
+        department: current.department,
+        role: current.role,
+        level: current.level,
+        hireDate: current.hireDate,
+        status: current.status.trim(),
+        gender: current.gender,
+        createdAt: current.createdAt,
+        updatedAt: current.updatedAt,
+        currentAmountMinor: sal?.amountMinor ?? null,
+        currentCurrency: sal?.currency.trim() ?? null,
+      };
+    }
+
+    const updated = await tx.employee.update({
+      where: { id: input.employeeId },
+      data: updateData,
+      include: { salaries: { where: { effectiveTo: null }, take: 1 } },
+    });
+
+    await tx.employeeChange.createMany({ data: changeRows });
+
+    const sal = updated.salaries[0];
+    return {
+      id: updated.id,
+      employeeCode: updated.employeeCode,
+      fullName: updated.fullName,
+      email: updated.email,
+      country: updated.country.trim(),
+      department: updated.department,
+      role: updated.role,
+      level: updated.level,
+      hireDate: updated.hireDate,
+      status: updated.status.trim(),
+      gender: updated.gender,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+      currentAmountMinor: sal?.amountMinor ?? null,
+      currentCurrency: sal?.currency.trim() ?? null,
+    };
+  });
+}
+
+// Newest-first change history for an employee.
+export async function listEmployeeChanges(
+  employeeId: string,
+): Promise<EmployeeChangeRow[]> {
+  const rows = await prisma.employeeChange.findMany({
+    where: { employeeId },
+    orderBy: { changedAt: 'desc' },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    employeeId: r.employeeId,
+    field: r.field,
+    oldValue: r.oldValue,
+    newValue: r.newValue,
+    changedBy: r.changedBy,
+    changedAt: r.changedAt,
+    reason: r.reason,
+  }));
+}
+
+export class EmployeeNotFoundError extends Error {
+  constructor(id: string) {
+    super(`employee ${id} not found`);
+    this.name = 'EmployeeNotFoundError';
+  }
+}

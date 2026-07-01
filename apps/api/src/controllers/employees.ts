@@ -1,12 +1,14 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { EmployeeListQuerySchema, RaiseInputSchema } from '@acme/shared';
+import { EmployeeListQuerySchema, RaiseInputSchema, PatchEmployeeInputSchema } from '@acme/shared';
 
 import {
   listEmployeesService,
   getEmployeeService,
   listSalariesService,
   giveRaiseService,
+  updateEmployeeService,
+  listEmployeeChangesService,
 } from '../services/employees.js';
 import { ApiError } from '../middleware/errors.js';
 
@@ -52,6 +54,38 @@ export async function listSalaries(
   try {
     const { id } = IdParamSchema.parse(req.params);
     const items = await listSalariesService(id);
+    res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PATCH /api/employees/:id
+export async function patchEmployee(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id } = IdParamSchema.parse(req.params);
+    const input = PatchEmployeeInputSchema.parse(req.body);
+    const changedBy = req.user?.id ?? null;
+    const result = await updateEmployeeService(id, input, changedBy);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// GET /api/employees/:id/changes
+export async function listChanges(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { id } = IdParamSchema.parse(req.params);
+    const items = await listEmployeeChangesService(id);
     res.json({ items });
   } catch (err) {
     next(err);

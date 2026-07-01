@@ -38,6 +38,7 @@ model Employee {
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   salaries Salary[]
+  changes  EmployeeChange[]
 
   // Query pattern: GET /employees with country/department/status filters.
   @@index([country], map: "employees_country_idx")
@@ -70,6 +71,26 @@ model Salary {
   // The partial unique index "at most one current row per employee"
   // is added in the migration SQL — Prisma doesn't model partial uniques.
   @@map("salaries")
+}
+
+// Append-only log of mutable employee field changes. One row per field per
+// change event. changedAt groups rows from the same edit (same timestamp).
+// Mirrors the Salary audit pattern.
+model EmployeeChange {
+  id         String   @id @default(uuid()) @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  field      String   @db.VarChar(60)
+  oldValue   String?  @map("old_value") @db.VarChar(500)
+  newValue   String?  @map("new_value") @db.VarChar(500)
+  changedBy  String?  @map("changed_by") @db.Uuid // Supabase user id
+  changedAt  DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  reason     String?  @db.VarChar(500)
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Query pattern: field history for an employee, newest first.
+  @@index([employeeId, changedAt(sort: Desc)], map: "employee_changes_history_idx")
+  @@map("employee_changes")
 }
 
 // Snapshot FX rates. (base, quote, as_of) -> rate.

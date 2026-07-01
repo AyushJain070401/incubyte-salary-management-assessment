@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
-import { useEmployee, useSalaryHistory } from '../api/employees';
+import { useEmployee, useSalaryHistory, useEmployeeChanges } from '../api/employees';
 import { Button } from '../components/ui/Button';
 import { SalaryHistory } from '../components/employees/SalaryHistory';
 import { RaiseDialog } from '../components/employees/RaiseDialog';
+import { EditEmployeeDialog } from '../components/employees/EditEmployeeDialog';
+import { EmploymentHistory } from '../components/employees/EmploymentHistory';
 import { formatDate, formatMoney } from '../lib/format';
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const employee = useEmployee(id);
   const history = useSalaryHistory(id);
+  const changes = useEmployeeChanges(id);
   const [raiseOpen, setRaiseOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (employee.isLoading) {
     return <p className="text-sm text-neutral-500">Loading…</p>;
@@ -41,9 +45,14 @@ export function EmployeeDetailPage() {
           <h1 className="text-2xl font-semibold tracking-tight mt-1">{e.fullName}</h1>
           <p className="text-sm text-neutral-500 mt-0.5 font-mono">{e.employeeCode}</p>
         </div>
-        <Button onClick={() => setRaiseOpen(true)} disabled={e.status !== 'active'}>
-          Give raise…
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => setEditOpen(true)}>
+            Edit details…
+          </Button>
+          <Button onClick={() => setRaiseOpen(true)} disabled={e.status !== 'active'}>
+            Give raise…
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -93,7 +102,19 @@ export function EmployeeDetailPage() {
         )}
       </div>
 
+      <div className="rounded-lg border border-neutral-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-neutral-900 mb-4">Employment history</h2>
+        {changes.isLoading ? (
+          <p className="text-sm text-neutral-500">Loading…</p>
+        ) : changes.data ? (
+          <EmploymentHistory rows={changes.data.items} />
+        ) : (
+          <p className="text-sm text-rose-700">Failed to load employment history.</p>
+        )}
+      </div>
+
       <RaiseDialog open={raiseOpen} onClose={() => setRaiseOpen(false)} employee={e} />
+      <EditEmployeeDialog open={editOpen} onClose={() => setEditOpen(false)} employee={e} />
     </section>
   );
 }

@@ -6,6 +6,8 @@ import type {
   EmployeeStatus,
   SalaryRead,
   RaiseInput,
+  PatchEmployeeInput,
+  EmployeeChangeRead,
 } from '@acme/shared';
 import { Prisma } from '@prisma/client';
 
@@ -15,6 +17,9 @@ import {
   listSalariesByEmployee,
   giveRaise,
   RaiseValidationError,
+  updateEmployee,
+  listEmployeeChanges,
+  EmployeeNotFoundError,
 } from '../repos/employees.js';
 import { toWire, fromWire } from '../domain/money.js';
 import { ApiError } from '../middleware/errors.js';
@@ -22,6 +27,7 @@ import type {
   EmployeeListRow,
   EmployeeDetailRow,
   SalaryHistoryRow,
+  EmployeeChangeRow,
 } from '../repos/employees.js';
 
 // Convert a Date to the YYYY-MM-DD ISO date string the schema requires.
@@ -137,6 +143,56 @@ export async function listSalariesService(employeeId: string): Promise<SalaryRea
   if (!exists) throw ApiError.notFound(`employee ${employeeId} not found`);
   const rows = await listSalariesByEmployee(employeeId);
   return rows.map(salaryRowToRead);
+}
+
+// PATCH /employees/:id — update mutable fields and record change rows.
+export async function updateEmployeeService(
+  id: string,
+  input: PatchEmployeeInput,
+  changedBy: string | null,
+): Promise<EmployeeRead> {
+  const { reason, ...patch } = input;
+  try {
+    const row = await updateEmployee({
+      employeeId: id,
+      patch,
+      changedBy,
+      reason: reason ?? null,
+    });
+    return detailRowToRead(row);
+  } catch (err) {
+    if (err instanceof EmployeeNotFoundError) throw ApiError.notFound(err.message);
+    if (
+      err instanceof Prisma.PrismaClientKnownRequestError &&
+      err.code === 'P2002'
+    ) {
+      throw ApiError.conflict('email already in use by another employee');
+    }
+    throw err;
+  }
+}
+
+// GET /employees/:id/changes — field change history, newest first.
+export async function listEmployeeChangesService(
+  employeeId: string,
+): Promise<EmployeeChangeRead[]> {
+  const exists = await getEmployeeById(employeeId);
+  if (!exists) throw ApiError.notFound(`employee ${employeeId} not found`);
+  const rows = await listEmployeeChanges(employeeId);
+  return rows.map(changeRowToRead);
+}
+
+function changeRowToRead(row: EmployeeChangeRow): EmployeeChangeRead {
+  return {
+    id: row.id,
+    employeeId: row.employeeId,
+    field: row.field,
+    oldValue: row.oldValue,
+    newValue: row.newValue,
+    changedBy: row.changedBy,
+    changedAt: row.changedAt.toISOString(),
+    reason: row.reason,
+  };
 }
 
 // Give-raise orchestration:

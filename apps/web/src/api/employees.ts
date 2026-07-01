@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EmployeeRead, Paginated, SalaryRead, RaiseInput } from '@acme/shared';
+import type {
+  EmployeeRead,
+  Paginated,
+  SalaryRead,
+  RaiseInput,
+  PatchEmployeeInput,
+  EmployeeChangeRead,
+} from '@acme/shared';
 
 import { apiFetch } from './client';
 
@@ -51,6 +58,31 @@ export function useSalaryHistory(id: string | undefined) {
   return useQuery({
     queryKey: ['employee', id, 'salaries'],
     queryFn: () => apiFetch<{ items: SalaryRead[] }>(`/api/employees/${id}/salaries`),
+    enabled: !!id,
+  });
+}
+
+export function useUpdateEmployee(employeeId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: PatchEmployeeInput) =>
+      apiFetch<EmployeeRead>(`/api/employees/${employeeId}`, {
+        method: 'PATCH',
+        body: input,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['employee', employeeId] });
+      qc.invalidateQueries({ queryKey: ['employees'] });
+      qc.invalidateQueries({ queryKey: ['employee', employeeId, 'changes'] });
+    },
+  });
+}
+
+export function useEmployeeChanges(id: string | undefined) {
+  return useQuery({
+    queryKey: ['employee', id, 'changes'],
+    queryFn: () =>
+      apiFetch<{ items: EmployeeChangeRead[] }>(`/api/employees/${id}/changes`),
     enabled: !!id,
   });
 }
